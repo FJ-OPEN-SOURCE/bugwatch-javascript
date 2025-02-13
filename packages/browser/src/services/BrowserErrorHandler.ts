@@ -9,6 +9,100 @@ import {
   isError,
 } from "@bugwatch/core";
 
+const MAX_BREADCRUMBS = 100;
+const breadcrumbs: {
+  type: "default";
+  timestamp: string;
+  level: "info" | "warning" | "error";
+  message: string;
+  category: string;
+  data?: Record<string, any> | null;
+  event_id?: string | null;
+}[] = [];
+
+const addBreadcrumb = (
+  breadcrumb: Omit<(typeof breadcrumbs)[number], "timestamp">
+) => {
+  if (breadcrumbs.length >= MAX_BREADCRUMBS) {
+    breadcrumbs.shift();
+  }
+
+  breadcrumbs.push({
+    ...breadcrumb,
+    timestamp: new Date().toISOString(),
+  });
+};
+
+const originalConsoleLog = console.log;
+console.log = (...args) => {
+  addBreadcrumb({
+    type: "default",
+    level: "info",
+    message: args.join(" "),
+    category: "console",
+    data: { arguments: args, logger: "console" },
+    event_id: null,
+  });
+  originalConsoleLog.apply(console, args);
+};
+
+const originalConsoleError = console.error;
+console.error = (...args) => {
+  addBreadcrumb({
+    type: "default",
+    level: "error",
+    message: args.join(" "),
+    category: "console",
+    data: { arguments: args, logger: "console" },
+    event_id: null,
+  });
+  originalConsoleError.apply(console, args);
+};
+
+document.addEventListener("click", (event) => {
+  const target = event.target as HTMLElement;
+  if (!target) return;
+
+  addBreadcrumb({
+    type: "default",
+    level: "info",
+    message: target.tagName.toLowerCase(),
+    category: "ui.click",
+    data: null,
+    event_id: null,
+  });
+});
+
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {
+  const [url, options] = args;
+  const method = options?.method || "GET";
+  const startTime = new Date().toISOString();
+
+  try {
+    const response = await originalFetch(...args);
+    addBreadcrumb({
+      type: "default",
+      level: "info",
+      message: `${method} ${url} - ${response.status}`,
+      category: "http.request",
+      data: { url, method, status: response.status },
+      event_id: null,
+    });
+    return response;
+  } catch (error) {
+    addBreadcrumb({
+      type: "default",
+      level: "error",
+      message: `${method} ${url} - FAILED`,
+      category: "http.request",
+      data: { url, method },
+      event_id: null,
+    });
+    throw error;
+  }
+};
+
 export default class BrowserErrorHandler {
   private config: ErrorHandlerConfig;
 
@@ -17,13 +111,10 @@ export default class BrowserErrorHandler {
   }
 
   private async handleError(error: Error | ErrorEvent) {
-    let errorObj: Error;
-
-    if (error instanceof ErrorEvent) {
-      errorObj = error.error || new Error(error.message);
-    } else {
-      errorObj = error;
-    }
+    let errorObj: Error =
+      error instanceof ErrorEvent
+        ? error.error || new Error(error.message)
+        : error;
 
     if (!isError(errorObj)) {
       errorObj = new Error(String(errorObj));
@@ -41,15 +132,19 @@ export default class BrowserErrorHandler {
         );
       }
 
+      const currentBreadcrumbs = [...breadcrumbs];
+
       const errorDetails = createErrorDetails(errorObj, {
         ...this.config.metadata,
         url: window.location.href,
         userAgent: navigator.userAgent,
         stackFrames,
         sourceLines,
+        breadcrumbs: { values: currentBreadcrumbs },
       });
 
       this.config.onError?.(errorDetails);
+      breadcrumbs.length = 0; // Now safe to clear
     }
   }
 

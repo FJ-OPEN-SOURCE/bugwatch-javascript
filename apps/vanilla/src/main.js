@@ -2,10 +2,14 @@ import "./style.css";
 import javascriptLogo from "./javascript.svg";
 import viteLogo from "/vite.svg";
 import { setupCounter } from "./counter.js";
-import Bugwatch from "@bugwatch/browser";
 
-const bugwatch = new Bugwatch();
-bugwatch.init();
+// import Bugwatch from "@bugwatch/browser";
+// const bugwatch = new Bugwatch();
+// bugwatch.init();
+// console.log(baby);
+
+// consta asd = "asd"; // todo: handle this Syntax Error
+// todo: handle fetch errors
 
 document.querySelector("#app").innerHTML = `
   <div>

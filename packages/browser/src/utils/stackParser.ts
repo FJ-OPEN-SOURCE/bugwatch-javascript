@@ -2,7 +2,8 @@ import { StackFrame } from "@/types/StackFrame";
 
 export const parseStackTrace = (stack: string): StackFrame[] => {
   const stackLines = stack.split("\n").slice(1); // Skip the first line (error message)
-  const regex = /at\s+(.*?)\s+\((.*?):(\d+):(\d+)\)/;
+  // const regex = /at\s+(.*?)\s+\((.*?):(\d+):(\d+)\)/; // previous regex take it if needed
+  const regex = /at\s+(?:(.*?)\s+\()?(.*?):(\d+):(\d+)\)?/;
 
   return stackLines
     .map((line) => {
