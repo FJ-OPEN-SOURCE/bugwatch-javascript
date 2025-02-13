@@ -2,10 +2,10 @@ import "./style.css";
 import javascriptLogo from "./javascript.svg";
 import viteLogo from "/vite.svg";
 import { setupCounter } from "./counter.js";
-import Bugwatch from "@bugwatch/browser";
+// import Bugwatch from "@bugwatch/browser";
 
-const bugwatch = new Bugwatch();
-bugwatch.init();
+// const bugwatch = new Bugwatch();
+// bugwatch.init();
 
 document.querySelector("#app").innerHTML = `
   <div>
